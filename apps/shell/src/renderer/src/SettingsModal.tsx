@@ -8,7 +8,6 @@ import {
   AI_CUSTOM_FONT_MAX_PX,
   AI_CUSTOM_FONT_MIN_PX,
   DEFAULT_AI_PANEL_PREFS,
-  Dropdown,
   aiPanelFontPx,
   clampAiCustomFontSize,
 } from '@genoffice/ui'
@@ -699,10 +698,10 @@ function AiModelPane({ t }: { t: TFunc }) {
         <div className="set-field-text">
           <label className="set-field-label">{t('setAiProvider')}</label>
         </div>
-        <Dropdown
-          className="set-dd"
+        <GlassSelect
+          id="set-ai-provider"
           value={provider}
-          ariaLabel={t('setAiProvider')}
+          aria-label={t('setAiProvider')}
           options={catalog.map((c) => ({
             value: c.id,
             label: c.label,
@@ -713,7 +712,7 @@ function AiModelPane({ t }: { t: TFunc }) {
               </>
             ),
           }))}
-          onPick={(v) => selectProvider(v as AiSettings['provider'])}
+          onChange={(v) => selectProvider(v as AiSettings['provider'])}
         />
       </div>
       <div className="set-field-desc set-ai-note">
@@ -730,15 +729,15 @@ function AiModelPane({ t }: { t: TFunc }) {
             </div>
             <div className="set-ai-endpoint-row">
               {endpoint && (
-                <Dropdown
-                  className="set-dd"
+                <GlassSelect
+                  id="set-ai-endpoint-pick"
                   value={endpoint.id}
-                  ariaLabel={t('setAiEndpoint')}
+                  aria-label={t('setAiEndpoint')}
                   options={(settings.customEndpoints ?? []).map((e) => ({
                     value: e.id,
                     label: customEndpointLabel(e, meta.label),
                   }))}
-                  onPick={pickEndpoint}
+                  onChange={pickEndpoint}
                 />
               )}
               <button className="set-btn" type="button" onClick={addEndpoint}>
@@ -776,15 +775,15 @@ function AiModelPane({ t }: { t: TFunc }) {
           <label className="set-field-label">{t('setAiModelId')}</label>
         </div>
         {meta && meta.models.length > 0 ? (
-          <Dropdown
-            className="set-dd"
+          <GlassSelect
+            id="set-ai-model-pick"
             value={config.model || meta.defaultModel}
-            ariaLabel={t('setAiModelId')}
+            aria-label={t('setAiModelId')}
             options={meta.models.map((m) => ({
               value: m,
               label: m,
             }))}
-            onPick={(m) => updateConfig({ model: m })}
+            onChange={(m) => updateConfig({ model: m })}
             searchPlaceholder={meta.models.length > 12 ? t('setAiModelSearch') : undefined}
           />
         ) : (
@@ -903,15 +902,15 @@ function AiModelPane({ t }: { t: TFunc }) {
                     <div className="set-field-desc">{t('setAiApiProtocolHint')}</div>
                   </div>
                 </div>
-                <Dropdown
-                  className="set-dd"
+                <GlassSelect
+                  id="set-ai-protocol"
                   value={endpoint.api ?? 'openai-compatible'}
-                  ariaLabel={t('setAiApiProtocol')}
+                  aria-label={t('setAiApiProtocol')}
                   options={AI_CUSTOM_PROTOCOLS.map((api) => ({
                     value: api,
                     label: t(PROTOCOL_LABEL_KEYS[api]),
                   }))}
-                  onPick={(api) => updateEndpointProfile({ api: api as AiCustomProtocol })}
+                  onChange={(api) => updateEndpointProfile({ api: api as AiCustomProtocol })}
                 />
               </div>
               <div className="set-field set-ai-profile-field">
@@ -966,16 +965,16 @@ function AiModelPane({ t }: { t: TFunc }) {
                   />
                   <div className="set-ai-profile-row">
                     <span className="set-ai-profile-label">{t('setAiCompatVision')}</span>
-                    <Dropdown
-                      className="set-dd"
+                    <GlassSelect
+                      id="set-ai-compat-vision"
                       value={endpointVision === undefined ? 'auto' : endpointVision ? 'yes' : 'no'}
-                      ariaLabel={t('setAiCompatVision')}
+                      aria-label={t('setAiCompatVision')}
                       options={[
                         { value: 'auto', label: t('setAiCompatVisionAuto') },
                         { value: 'yes', label: t('setAiCompatVisionYes') },
                         { value: 'no', label: t('setAiCompatVisionNo') },
                       ]}
-                      onPick={(v) =>
+                      onChange={(v) =>
                         updateEndpointProfile({
                           compat: applySwitch(
                             endpointCompat,
@@ -1411,10 +1410,9 @@ function AiMediaPane({
       <div className="set-field-text">
         <label className="set-field-label">{t('setAiProvider')}</label>
       </div>
-      <Dropdown
-        className="set-dd"
+      <GlassSelect
         value={value}
-        ariaLabel={label}
+        aria-label={label}
         options={options.map((c) => ({
           value: c.id,
           label: c.label,
@@ -1425,7 +1423,7 @@ function AiMediaPane({
             </>
           ),
         }))}
-        onPick={onPick}
+        onChange={onPick}
       />
     </div>
   )
@@ -1444,12 +1442,13 @@ function AiMediaPane({
         </label>
       </div>
       {models.length > 0 ? (
-        <Dropdown
-          className="set-dd"
+        <GlassSelect
+          id={id}
           value={value || fallback}
-          ariaLabel={t('setAiModelId')}
+          aria-label={t('setAiModelId')}
           options={models.map((m) => ({ value: m, label: m }))}
-          onPick={onChange}
+          onChange={onChange}
+          searchPlaceholder={models.length > 12 ? t('setAiModelSearch') : undefined}
         />
       ) : (
         <input
@@ -1683,12 +1682,12 @@ function AiMediaPane({
                 <div className="set-field-text">
                   <label className="set-field-label">{t('setSearchRerankEndpoint')}</label>
                 </div>
-                <Dropdown
-                  className="set-dd"
+                <GlassSelect
+                  id="set-search-rerank-endpoint"
                   value={fileSearch.endpoint}
-                  ariaLabel={t('setSearchRerankEndpoint')}
+                  aria-label={t('setSearchRerankEndpoint')}
                   options={DECISION_ENDPOINTS}
-                  onPick={(v) => setFileSearch({ ...fileSearch, endpoint: v as DecisionEndpoint })}
+                  onChange={(v) => setFileSearch({ ...fileSearch, endpoint: v as DecisionEndpoint })}
                 />
               </div>
               {keyRow(
@@ -2135,30 +2134,30 @@ export function SettingsModal({
                   <div className="set-field-text">
                     <label className="set-field-label">{t('documentTheme')}</label>
                   </div>
-                  <Dropdown
-                    className="set-dd"
+                  <GlassSelect
+                    id="set-doc-theme"
                     value={docTheme}
-                    ariaLabel={t('documentTheme')}
+                    aria-label={t('documentTheme')}
                     options={DOC_THEME_OPTIONS.map((opt) => ({
                       value: opt.value,
                       label: t(opt.labelKey),
                     }))}
-                    onPick={(v) => applyDocumentTheme(v as DocTheme)}
+                    onChange={(v) => applyDocumentTheme(v as DocTheme)}
                   />
                 </div>
                 <div className="set-field">
                   <div className="set-field-text">
                     <label className="set-field-label">{t('csvImportLimit')}</label>
                   </div>
-                  <Dropdown
-                    className="set-dd"
+                  <GlassSelect
+                    id="set-csv-limit"
                     value={String(csvLimitMb)}
-                    ariaLabel={t('csvImportLimit')}
+                    aria-label={t('csvImportLimit')}
                     options={CSV_IMPORT_LIMIT_CHOICES_MB.map((mb) => ({
                       value: String(mb),
                       label: `${mb} MB`,
                     }))}
-                    onPick={(v) => {
+                    onChange={(v) => {
                       const mb = Number(v)
                       if (!Number.isInteger(mb)) return
                       setCsvLimitMb(mb)
@@ -2170,15 +2169,15 @@ export function SettingsModal({
                   <div className="set-field-text">
                     <label className="set-field-label">{t('setAiPanelSide')}</label>
                   </div>
-                  <Dropdown
-                    className="set-dd"
+                  <GlassSelect
+                    id="set-ai-panel-side"
                     value={aiPrefs.side}
-                    ariaLabel={t('setAiPanelSide')}
+                    aria-label={t('setAiPanelSide')}
                     options={[
                       { value: 'left', label: t('aiPanelSideLeft') },
                       { value: 'right', label: t('aiPanelSideRight') },
                     ]}
-                    onPick={(side) => updateAiPrefs({ side: side as AiPanelSide })}
+                    onChange={(side) => updateAiPrefs({ side: side as AiPanelSide })}
                   />
                 </div>
                 <div className="set-field">
@@ -2192,15 +2191,15 @@ export function SettingsModal({
                       onCommit={(px) => updateAiPrefs({ customFontSize: px })}
                     />
                   )}
-                  <Dropdown
-                    className="set-dd"
+                  <GlassSelect
+                    id="set-ai-font-size"
                     value={aiPrefs.fontSize}
-                    ariaLabel={t('setAiFontSize')}
+                    aria-label={t('setAiFontSize')}
                     options={AI_FONT_SIZE_OPTIONS.map((opt) => ({
                       value: opt.value,
                       label: t(opt.labelKey),
                     }))}
-                    onPick={(v) => {
+                    onChange={(v) => {
                       const fontSize = v as AiFontSize
                       // start the custom size from the preset being left so nothing jumps
                       updateAiPrefs(

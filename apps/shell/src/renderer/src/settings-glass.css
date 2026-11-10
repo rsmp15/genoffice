@@ -158,6 +158,18 @@
   font-size: 13.5px;
   transition: background 0.12s, border-color 0.12s;
 }
+.set-select-wrap,
+.gsel-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+}
+.set-ai-endpoint-row .gsel-trigger {
+  flex: 1;
+  min-width: 0;
+}
 .set-dd .gs-dd-btn:hover,
 .set-dd .gs-dd-btn:focus-visible,
 .set-select-wrap:hover,
@@ -186,6 +198,36 @@
 .gsel-option:hover {
   background: var(--hover);
 }
+
+/* ── Scrollbars in settings ── */
+.set-pane,
+.gsel-menu {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-primary, currentColor) 22%, transparent) transparent;
+}
+.set-dialog ::-webkit-scrollbar,
+.set-pane::-webkit-scrollbar,
+.gsel-menu::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.set-dialog ::-webkit-scrollbar-track,
+.set-pane::-webkit-scrollbar-track,
+.gsel-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+.set-dialog ::-webkit-scrollbar-thumb,
+.set-pane::-webkit-scrollbar-thumb,
+.gsel-menu::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-primary, #888888) 22%, transparent);
+  border-radius: 9999px;
+}
+.set-dialog ::-webkit-scrollbar-thumb:hover,
+.set-pane::-webkit-scrollbar-thumb:hover,
+.gsel-menu::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-primary, #888888) 38%, transparent);
+}
+
 
 /* ── Integrations ── */
 .set-intg-hero {

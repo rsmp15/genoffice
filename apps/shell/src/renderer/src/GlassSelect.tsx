@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import './glass-select.css'
 
 // Replacement for the native <select>: the OS popup can't be themed (that blue list),
-// so this draws its own glass listbox. Keyboard: ↑ ↓ Home End Enter Space Esc Tab + type-ahead.
+// so this draws its own glass listbox. Keyboard: ↑ ↓ Home End Enter Space Esc Tab + type-ahead + optional search.
 
 export interface GlassOption {
   value: string
   label: string
   disabled?: boolean
+  render?: ReactNode
 }
 
 interface GlassSelectProps {
@@ -21,6 +22,7 @@ interface GlassSelectProps {
   /** extra classes on the trigger (e.g. 'ap-pill') */
   className?: string
   'aria-label'?: string
+  searchPlaceholder?: string
 }
 
 /** measuring state: fixed + invisible, so it can't extend the page or trigger scrolling */
@@ -35,32 +37,41 @@ export function GlassSelect({
   onChange,
   className,
   'aria-label': ariaLabel,
+  searchPlaceholder,
 }: GlassSelectProps) {
   const uid = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
+  const [search, setSearch] = useState('')
   const [style, setStyle] = useState<CSSProperties>(HIDDEN)
   const typed = useRef({ text: '', at: 0 })
 
   const selected = options.find((o) => o.value === value)
-  const enabled = options.map((o, i) => (o.disabled ? -1 : i)).filter((i) => i >= 0)
+  const filteredOptions =
+    searchPlaceholder && search.trim()
+      ? options.filter((o) => o.label.toLowerCase().includes(search.trim().toLowerCase()))
+      : options
+  const enabled = filteredOptions.map((o, i) => (o.disabled ? -1 : i)).filter((i) => i >= 0)
 
   const close = useCallback((refocus: boolean) => {
     setOpen(false)
+    setSearch('')
     if (refocus) triggerRef.current?.focus()
   }, [])
 
   const openMenu = (): void => {
-    const current = options.findIndex((o) => o.value === value && !o.disabled)
+    const current = filteredOptions.findIndex((o) => o.value === value && !o.disabled)
     setActive(current >= 0 ? current : (enabled[0] ?? 0))
+    setSearch('')
     setStyle(HIDDEN)
     setOpen(true)
   }
 
   const choose = (index: number): void => {
-    const opt = options[index]
+    const opt = filteredOptions[index]
     if (!opt || opt.disabled) return
     if (opt.value !== value) onChange(opt.value)
     close(true)
@@ -81,17 +92,23 @@ export function GlassSelect({
     setStyle({
       position: 'fixed',
       right: Math.max(VIEWPORT_MARGIN, window.innerWidth - rect.right),
-      minWidth: rect.width,
-      maxHeight: Math.min(320, room),
+      minWidth: Math.max(rect.width, 160),
+      maxHeight: Math.min(340, room),
       ...(flip ? { bottom: window.innerHeight - rect.top + GAP } : { top: rect.bottom + GAP }),
     })
-  }, [open])
+  }, [open, search])
 
-  // focus the list once it is visible (a hidden element can't take focus), so the keyboard works at once
+  // focus the list or search input once visible
   const positioned = open && style.visibility !== 'hidden'
   useEffect(() => {
-    if (positioned) menuRef.current?.focus({ preventScroll: true })
-  }, [positioned])
+    if (positioned) {
+      if (searchPlaceholder && searchInputRef.current) {
+        searchInputRef.current.focus({ preventScroll: true })
+      } else {
+        menuRef.current?.focus({ preventScroll: true })
+      }
+    }
+  }, [positioned, searchPlaceholder])
 
   // dismiss on outside press, resize, or scrolling the page behind
   useEffect(() => {
@@ -116,8 +133,7 @@ export function GlassSelect({
     }
   }, [open, close])
 
-  // keep the highlighted option in view by scrolling the list itself (scrollIntoView would also
-  // scroll the page behind, which dismisses the menu)
+  // keep the highlighted option in view by scrolling the list itself
   useEffect(() => {
     const menu = menuRef.current
     if (!open || !menu || style.visibility === 'hidden') return
@@ -142,10 +158,36 @@ export function GlassSelect({
     }
   }
 
+  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    switch (e.key) {
+      case 'Escape':
+        e.preventDefault()
+        e.stopPropagation()
+        close(true)
+        return
+      case 'ArrowDown':
+        e.preventDefault()
+        move(1)
+        return
+      case 'ArrowUp':
+        e.preventDefault()
+        move(-1)
+        return
+      case 'Enter':
+        e.preventDefault()
+        if (enabled.length > 0 && active >= 0 && active < filteredOptions.length) {
+          choose(active)
+        }
+        return
+      case 'Tab':
+        close(false)
+        return
+    }
+  }
+
   const onMenuKeyDown = (e: React.KeyboardEvent): void => {
     switch (e.key) {
       case 'Escape':
-        // closes the list only, never the Settings dialog underneath
         e.preventDefault()
         e.stopPropagation()
         close(true)
@@ -169,21 +211,23 @@ export function GlassSelect({
       case 'Enter':
       case ' ':
         e.preventDefault()
-        choose(active)
+        if (enabled.length > 0 && active >= 0 && active < filteredOptions.length) {
+          choose(active)
+        }
         return
       case 'Tab':
         close(false)
         return
     }
-    // type-ahead: jump to the next option starting with what was typed
-    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    // type-ahead: jump to the next option starting with what was typed (when no search input)
+    if (!searchPlaceholder && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
       const now = Date.now()
       const buf = typed.current
       buf.text = now - buf.at > 600 ? e.key.toLowerCase() : buf.text + e.key.toLowerCase()
       buf.at = now
       const start = buf.text.length === 1 ? enabled.indexOf(active) + 1 : enabled.indexOf(active)
       const order = [...enabled.slice(start), ...enabled.slice(0, start)]
-      const hit = order.find((i) => options[i]!.label.toLowerCase().startsWith(buf.text))
+      const hit = order.find((i) => filteredOptions[i]?.label.toLowerCase().startsWith(buf.text))
       if (hit !== undefined) setActive(hit)
     }
   }
@@ -202,32 +246,56 @@ export function GlassSelect({
       style={style}
       onKeyDown={onMenuKeyDown}
     >
-      {options.map((opt, i) => (
-        <div
-          key={opt.value}
-          id={`${uid}-opt-${i}`}
-          data-index={i}
-          role="option"
-          aria-selected={opt.value === value}
-          aria-disabled={opt.disabled || undefined}
-          className={`gsel-option${i === active ? ' active' : ''}${opt.disabled ? ' disabled' : ''}`}
-          onMouseMove={() => !opt.disabled && i !== active && setActive(i)}
-          onClick={() => choose(i)}
-        >
-          <span className="gsel-label">{opt.label}</span>
-          {opt.value === value && (
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path
-                d="m2.8 7.3 2.8 2.8 5.6-6"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
+      {searchPlaceholder && (
+        <div className="gsel-search-wrap">
+          <svg className="gsel-search-icon" width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="m10.5 10.5 3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="gsel-search-input"
+            placeholder={searchPlaceholder}
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setActive(0)
+            }}
+            onKeyDown={onSearchKeyDown}
+          />
         </div>
-      ))}
+      )}
+      {filteredOptions.length === 0 ? (
+        <div className="gsel-empty">No results</div>
+      ) : (
+        filteredOptions.map((opt, i) => (
+          <div
+            key={opt.value}
+            id={`${uid}-opt-${i}`}
+            data-index={i}
+            role="option"
+            aria-selected={opt.value === value}
+            aria-disabled={opt.disabled || undefined}
+            className={`gsel-option${i === active ? ' active' : ''}${opt.disabled ? ' disabled' : ''}`}
+            onMouseMove={() => !opt.disabled && i !== active && setActive(i)}
+            onClick={() => choose(i)}
+          >
+            <span className="gsel-label">{opt.render ?? opt.label}</span>
+            {opt.value === value && (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path
+                  d="m2.8 7.3 2.8 2.8 5.6-6"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </div>
+        ))
+      )}
     </div>
   )
 
@@ -245,7 +313,7 @@ export function GlassSelect({
         onClick={() => (open ? close(false) : openMenu())}
         onKeyDown={onTriggerKeyDown}
       >
-        <span className="set-select-text">{selected?.label ?? ''}</span>
+        <span className="set-select-text">{selected ? (selected.render ?? selected.label) : ''}</span>
       </button>
       {menu && createPortal(menu, document.body)}
     </>
