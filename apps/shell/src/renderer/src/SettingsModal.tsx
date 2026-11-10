@@ -61,6 +61,7 @@ import { ProviderLogo } from './provider-logos'
 import { IntegrationsPane, skillUpdateDue } from './IntegrationsPane'
 import { FoundSkills } from './FoundSkills'
 import './settings.css'
+import './settings-glass.css'
 
 // ── Settings modal (opened from the account menu) ─────────
 // Genspark-style two-pane dialog: section nav on the left, fields on the right.
@@ -805,24 +806,23 @@ function AiModelPane({ t }: { t: TFunc }) {
               {t('setAiThinking')}
             </label>
           </div>
-          <select
+          <GlassSelect
             id="set-ai-thinking"
-            className="set-input"
             value={thinkingValue}
-            onChange={(e) => {
+            options={[
+              { value: '', label: t('setAiThinkingDefault') },
+              ...thinkingLevels.map((level) => ({
+                value: level,
+                label: level === 'none' ? t('setAiSwitchOff') : level,
+              })),
+            ]}
+            onChange={(value) => {
               const thinking = { ...(config.thinking ?? {}) }
-              if (e.target.value === '') delete thinking[config.model]
-              else thinking[config.model] = e.target.value
+              if (value === '') delete thinking[config.model]
+              else thinking[config.model] = value
               updateConfig({ thinking: Object.keys(thinking).length > 0 ? thinking : undefined })
             }}
-          >
-            <option value="">{t('setAiThinkingDefault')}</option>
-            {thinkingLevels.map((level) => (
-              <option key={level} value={level}>
-                {level === 'none' ? t('setAiSwitchOff') : level}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       ) : null}
       {isCodex ? (
