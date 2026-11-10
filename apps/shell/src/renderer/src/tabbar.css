@@ -453,3 +453,9 @@ body.overlay-title-bar .tab-bar-drag-spacer {
   padding: 1px 4px;
   outline: none;
 }
+
+/* in-bar File/Edit/... menus already present: hide the duplicate hamburger */
+.tab-menus ~ .tab-app-menu-btn {
+  display: none;
+}
+

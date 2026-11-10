@@ -3233,3 +3233,26 @@ button.kb-ask-card-name:hover {
   padding-top: 8px;
   border-top: 1px solid var(--shell-border);
 }
+
+/* ---- quick-create tiles: stop the 14-tile row crushing labels (wrap into a grid) ---- */
+.quick-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 10px;
+}
+
+.quick-card {
+  flex: none;
+  max-width: none;
+  min-width: 0;
+}
+
+.quick-title {
+  flex: 0 1 auto;
+  min-width: 2ch;
+}
+
+.quick-title-row .ai-chip {
+  flex-shrink: 0;
+}
+
