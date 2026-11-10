@@ -2950,6 +2950,7 @@ button.kb-ask-card-name:hover {
 .kb-ask-thread-new:hover {
   background: var(--hover);
   color: var(--text);
+}
 
 /* ---- left rail navigation (icon buttons) ---- */
 .rail-nav {

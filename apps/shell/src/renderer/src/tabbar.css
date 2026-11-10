@@ -94,7 +94,6 @@ body.overlay-title-bar .tab-bar-drag-spacer {
 .tab-app-menu-btn {
   margin-right: 2px;
 }
-}
 
 /* scrollable middle section; empty space stays part of the window drag region.
  * Horizontal padding keeps the edge tabs' feet inside the scroll clip. */
@@ -453,5 +452,4 @@ body.overlay-title-bar .tab-bar-drag-spacer {
   border-radius: 4px;
   padding: 1px 4px;
   outline: none;
-}
 }
