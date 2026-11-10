@@ -771,11 +771,13 @@ function AccountEntry({
   onStatusChange,
   onFileSearchSettingsChange,
   openRequest,
+  onSettingsClose,
 }: {
   onStatusChange?: (status: AccountStatus | null) => void
   onFileSearchSettingsChange?: () => void
   /** a fresh object per request: the home list asks to open the modal on a given block */
   openRequest?: SettingsTarget | null
+  onSettingsClose?: () => void
 }) {
   const { t } = useI18n()
   const [status, setStatus] = useState<AccountStatus | null>(null)
@@ -943,7 +945,10 @@ function AccountEntry({
           urlCopied={urlCopied}
           onOpenLoginUrl={openLoginUrl}
           onCopyLoginUrl={copyLoginUrl}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => {
+            setSettingsOpen(false)
+            onSettingsClose?.()
+          }}
           onFileSearchChange={onFileSearchSettingsChange}
           onLogin={() => {
             setSettingsOpen(false)
@@ -1512,8 +1517,8 @@ export function Home() {
     })
   }
 
-  const startAppearance = () => {
-    setSettingsRequest({ section: 'appearance' })
+  const openSettings = () => {
+    setSettingsRequest({ section: 'general' })
   }
 
   useEffect(() => {
@@ -3581,31 +3586,19 @@ export function Home() {
 
           <button
             className="rail-btn"
-            title={t('navRecycleBinTip')}
-            aria-label={t('navRecycleBin')}
-            onClick={openRecycleBin}
+            title={`${t('settings')} (${useShortcutHint('openSettings') || 'Ctrl+,'})`}
+            aria-label={t('settings')}
+            onClick={openSettings}
           >
             <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.2" />
               <path
-                d="M3 4.5h10M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M4 4.5l.7 8.4A1.5 1.5 0 0 0 6.2 14.4h3.6a1.5 1.5 0 0 0 1.5-1.5l.7-8.4"
+                d="M6.8 1.5h2.4l.3 1.4a5.5 5.5 0 0 1 1.3.7l1.3-.6 1.7 1.7-.6 1.3c.3.4.5.9.7 1.3l1.4.3v2.4l-1.4.3a5.5 5.5 0 0 1-.7 1.3l.6 1.3-1.7 1.7-1.3-.6a5.5 5.5 0 0 1-1.3.7l-.3 1.4H6.8l-.3-1.4a5.5 5.5 0 0 1-1.3-.7l-1.3.6-1.7-1.7.6-1.3a5.5 5.5 0 0 1-.7-1.3l-1.4-.3V6.8l1.4-.3a5.5 5.5 0 0 1 .7-1.3l-.6-1.3 1.7-1.7 1.3.6a5.5 5.5 0 0 1 1.3-.7l.3-1.4z"
                 stroke="currentColor"
                 strokeWidth="1.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-            </svg>
-          </button>
-
-          <button
-            className="rail-btn"
-            title={t('setSecAppearance')}
-            aria-label={t('setSecAppearance')}
-            onClick={startAppearance}
-          >
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <circle cx="8" cy="8" r="6.3" stroke="currentColor" strokeWidth="1.3" />
-              <path d="M8 1.7v12.6" stroke="currentColor" strokeWidth="1.3" />
-              <path d="M8 1.7a6.3 6.3 0 0 1 0 12.6z" fill="currentColor" />
             </svg>
           </button>
         </nav>
@@ -3614,6 +3607,7 @@ export function Home() {
           onStatusChange={handleAccountStatus}
           onFileSearchSettingsChange={() => setRerankSettingsTick((n) => n + 1)}
           openRequest={settingsRequest}
+          onSettingsClose={() => setSettingsRequest(null)}
         />
       </div>
 
