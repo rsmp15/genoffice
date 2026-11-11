@@ -1,16 +1,23 @@
-import { execFile, spawn } from 'node:child_process'
-import { homedir } from 'node:os'
+import { spawn } from 'node:child_process'
 import { join } from 'node:path'
-import { ipcMain, shell } from 'electron'
-import { HOME_CHANNELS } from '../shared/home-api'
+import { app, shell } from 'electron'
 
 /**
  * Open the operating system's Recycle Bin / Trash window.
- * Resolves true once the system accepted the request, false when it could not be opened
- * (the shell shows a toast in that case).
+ *
+ * Platform behaviors:
+ * - Windows: The Recycle Bin is a virtual shell namespace, not a standard directory.
+ *   `explorer.exe shell:RecycleBinFolder` opens it. Explorer often returns non-zero
+ *   exit codes even on success, so success is defined by process spawn.
+ * - macOS: Hand `~/.Trash` to Launch Services via `shell.openPath`. Finder
+ *   shows the Trash window without triggering AppleScript automation entitlements.
+ * - Linux: Follows the Freedesktop spec via `xdg-open trash:///`. Spawns
+ *   detached with ignored stdio so the IPC promise settles immediately.
+ *
+ * Resolves true if the system accepted the request, false otherwise.
  */
-export async function openRecycleBin(): Promise<boolean> {
-  switch (process.platform) {
+export async function openTrash(platform: NodeJS.Platform = process.platform): Promise<boolean> {
+  switch (platform) {
     case 'win32':
       return openWindowsRecycleBin()
     case 'darwin':
@@ -20,11 +27,6 @@ export async function openRecycleBin(): Promise<boolean> {
   }
 }
 
-/**
- * Windows: the Recycle Bin is a shell folder, not a real path, so shell.openPath can't reach it.
- * `explorer.exe shell:RecycleBinFolder` opens it. explorer.exe exits with code 1 even on success,
- * so success is "the process started", never its exit code.
- */
 function openWindowsRecycleBin(): Promise<boolean> {
   return new Promise((resolve) => {
     try {
@@ -43,30 +45,29 @@ function openWindowsRecycleBin(): Promise<boolean> {
   })
 }
 
-function openMacTrash(): Promise<boolean> {
+async function openMacTrash(): Promise<boolean> {
+  try {
+    const err = await shell.openPath(join(app.getPath('home'), '.Trash'))
+    return err === ''
+  } catch {
+    return false
+  }
+}
+
+function openLinuxTrash(): Promise<boolean> {
   return new Promise((resolve) => {
-    // Finder owns the Trash; asking it avoids needing Full Disk Access to read ~/.Trash directly
-    execFile(
-      'osascript',
-      ['-e', 'tell application "Finder" to open trash', '-e', 'tell application "Finder" to activate'],
-      (error) => resolve(!error),
-    )
+    try {
+      const child = spawn('xdg-open', ['trash:///'], {
+        detached: true,
+        stdio: 'ignore',
+      })
+      child.once('error', () => resolve(false))
+      child.once('spawn', () => {
+        child.unref()
+        resolve(true)
+      })
+    } catch {
+      resolve(false)
+    }
   })
-}
-
-async function openLinuxTrash(): Promise<boolean> {
-  const viaXdg = await new Promise<boolean>((resolve) => {
-    execFile('xdg-open', ['trash:///'], (error) => resolve(!error))
-  })
-  if (viaXdg) return true
-  // no trash:/// handler installed: open the freedesktop trash folder directly
-  const dataHome = process.env.XDG_DATA_HOME || join(homedir(), '.local', 'share')
-  const error = await shell.openPath(join(dataHome, 'Trash', 'files'))
-  return error === ''
-}
-
-/** (Re)register the IPC handler behind the Trash / Recycle Bin button and its shortcut. */
-export function registerTrashHandler(): void {
-  ipcMain.removeHandler(HOME_CHANNELS.openTrash)
-  ipcMain.handle(HOME_CHANNELS.openTrash, () => openRecycleBin())
 }
